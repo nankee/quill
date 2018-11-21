@@ -43,7 +43,14 @@ class Cursor extends Parchment.Embed {
   }
 
   length() {
-    return this._length;
+    // 如下改动是为了解决一下问题
+    // 环境： PC/webview
+    // 1. 初次写文档，存在placeholder的情况下,先执行加粗，然后中文输入法的情况下，placeholder不会消失
+    // 2. 在①的情况下，执行删除也是删除不掉的
+    // 原因：加粗这些情况下，输入内容是默认聚焦在cursor这个对象里面了，导致监听输入内容不对
+    // 解决办法: 当cursor对象里面存在用户数据时，当做textblot处理
+    let textLength = this.textNode.data.length;
+    return textLength <= 1 ? this._length : textLength - 1;
   }
 
   position() {
@@ -53,6 +60,7 @@ class Cursor extends Parchment.Embed {
   remove() {
     super.remove();
     this.parent = null;
+    this.selection.composing = false
   }
 
   restore() {
@@ -104,7 +112,7 @@ class Cursor extends Parchment.Embed {
   }
 
   value() {
-    return '';
+    return this.length() > 0 ? this.textNode.data : '';
   }
 }
 Cursor.blotName = 'cursor';
