@@ -117,6 +117,16 @@ class Keyboard extends Module {
         }
         if (binding.prefix != null && !binding.prefix.test(curContext.prefix)) return false;
         if (binding.suffix != null && !binding.suffix.test(curContext.suffix)) return false;
+        // 如下改动是为了解决一下问题： 这个用来避免中文输入法最后一个字符被preventdefault，从而导致删除的默认事件被禁止了，输入法并没有结束
+        // 环境： ios webview
+        // 问题描述：在空行开头，用中文输入法输入，不要点击完成的情况下，回删，一直删到底，
+        // 1. 会出现还存在最后一个字母浏览软键盘上删除不掉
+        // 2. 在①的情况下，会继续存在两个问题：
+        //  可能会出现不能继续输入了（此时键盘已经不可用了），
+        //  要么会出现继续输入一个字符，然后出现两个字符的情况（主要带上了之前未删除的字符）
+        // pc和android不出现的原因：pc端和android 中文输入法删除时返回keycode为229，不会触发keycode为8的binding.handler:handlebackspace事件，也就不会返回ture） 
+        // 解决办法：监听到用户的中文输入法还没有结束的情况下，不能返回true，执行后续的preventDefault
+        if (this.quill.selection && this.quill.selection.composing) return false;
         return binding.handler.call(this, range, curContext) !== true;
       });
       if (prevented) {
